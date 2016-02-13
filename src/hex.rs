@@ -14,8 +14,8 @@
 
 pub use self::FromHexError::*;
 
-use std::fmt;
-use std::error;
+use core::fmt;
+use collections::{String,Vec};
 
 /// A trait for converting a value to hexadecimal encoding
 pub trait ToHex {
@@ -75,15 +75,6 @@ impl fmt::Debug for FromHexError {
             InvalidHexCharacter(ch, idx) =>
                 write!(f, "Invalid character '{}' at position {}", ch, idx),
             InvalidHexLength => write!(f, "Invalid input length"),
-        }
-    }
-}
-
-impl error::Error for FromHexError {
-    fn description(&self) -> &str {
-        match *self {
-            InvalidHexCharacter(_, _) => "invalid character",
-            InvalidHexLength => "invalid length",
         }
     }
 }

@@ -15,8 +15,8 @@
 pub use self::FromBase64Error::*;
 pub use self::CharacterSet::*;
 
-use std::fmt;
-use std::error;
+use core::fmt;
+use collections::{String,Vec};
 
 /// Available encoding character sets
 #[derive(Clone, Copy, Debug)]
@@ -210,15 +210,6 @@ impl fmt::Debug for FromBase64Error {
             InvalidBase64Byte(ch, idx) =>
                 write!(f, "Invalid character '{}' at position {}", ch, idx),
             InvalidBase64Length => write!(f, "Invalid length"),
-        }
-    }
-}
-
-impl error::Error for FromBase64Error {
-    fn description(&self) -> &str {
-        match *self {
-            InvalidBase64Byte(_, _) => "invalid character",
-            InvalidBase64Length => "invalid length",
         }
     }
 }

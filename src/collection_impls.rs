@@ -10,10 +10,11 @@
 
 //! Implementations of serialization for structures found in libcollections
 
-use std::hash::Hash;
+use core::hash::Hash;
 
 use {Decodable, Encodable, Decoder, Encoder};
-use std::collections::{LinkedList, VecDeque, BTreeMap, BTreeSet, HashMap, HashSet};
+use collections::{LinkedList, VecDeque, BTreeMap, BTreeSet};
+use core_collections::{HashMap, HashSet};
 
 impl<
     T: Encodable

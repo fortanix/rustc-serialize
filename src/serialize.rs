@@ -14,13 +14,13 @@
 Core encoding and decoding interfaces.
 */
 
-use std::cell::{Cell, RefCell};
-use std::ffi::OsString;
-use std::path;
-use std::rc::Rc;
-use std::sync::Arc;
-use std::marker::PhantomData;
-use std::borrow::Cow;
+use core::cell::{Cell, RefCell};
+use alloc::rc::Rc;
+use alloc::arc::Arc;
+use alloc::boxed::Box;
+use core::marker::PhantomData;
+use collections::borrow::{ToOwned,Cow};
+use collections::{String,Vec};
 
 pub trait Encoder {
     type Error;
@@ -603,47 +603,6 @@ macro_rules! array {
 array! {
     32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17, 16,
     15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0
-}
-
-impl Encodable for path::Path {
-    #[cfg(unix)]
-    fn encode<S: Encoder>(&self, e: &mut S) -> Result<(), S::Error> {
-        use std::os::unix::prelude::*;
-        self.as_os_str().as_bytes().encode(e)
-    }
-    #[cfg(windows)]
-    fn encode<S: Encoder>(&self, e: &mut S) -> Result<(), S::Error> {
-        use std::os::windows::prelude::*;
-        let v = self.as_os_str().encode_wide().collect::<Vec<_>>();
-        v.encode(e)
-    }
-}
-
-impl Encodable for path::PathBuf {
-    fn encode<S: Encoder>(&self, e: &mut S) -> Result<(), S::Error> {
-        (**self).encode(e)
-    }
-}
-
-impl Decodable for path::PathBuf {
-    #[cfg(unix)]
-    fn decode<D: Decoder>(d: &mut D) -> Result<path::PathBuf, D::Error> {
-        use std::os::unix::prelude::*;
-        let bytes: Vec<u8> = try!(Decodable::decode(d));
-        let s: OsString = OsStringExt::from_vec(bytes);
-        let mut p = path::PathBuf::new();
-        p.push(s);
-        Ok(p)
-    }
-    #[cfg(windows)]
-    fn decode<D: Decoder>(d: &mut D) -> Result<path::PathBuf, D::Error> {
-        use std::os::windows::prelude::*;
-        let bytes: Vec<u16> = try!(Decodable::decode(d));
-        let s: OsString = OsStringExt::from_wide(&bytes);
-        let mut p = path::PathBuf::new();
-        p.push(s);
-        Ok(p)
-    }
 }
 
 impl<T: Encodable + Copy> Encodable for Cell<T> {
