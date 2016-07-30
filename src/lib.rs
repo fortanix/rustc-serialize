@@ -38,7 +38,7 @@
             unstable(feature = "rustc_private",
                      reason = "use the crates.io `rustc-serialize` library instead"))]
 
-#![feature(collections,alloc,core_float)]
+#![feature(collections,alloc)]
 #![no_std]
 
 #[cfg(test)] extern crate rand;
@@ -50,6 +50,20 @@ extern crate alloc;
 
 pub use self::serialize::{Decoder, Encoder, Decodable, Encodable,
                           DecoderHelpers, EncoderHelpers};
+
+
+// Limit collections from allocating more than
+// 1 MB for calls to `with_capacity`.
+fn cap_capacity<T>(given_len: usize) -> usize {
+    use core::cmp::min;
+    use core::mem::size_of;
+    const PRE_ALLOCATE_CAP: usize = 0x100000;
+
+    match size_of::<T>() {
+        0 => min(given_len, PRE_ALLOCATE_CAP),
+        n => min(given_len, PRE_ALLOCATE_CAP / n)
+    }
+}
 
 mod serialize;
 mod collection_impls;

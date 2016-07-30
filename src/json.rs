@@ -254,7 +254,6 @@ use core::ops::Index;
 use core::str::FromStr;
 use collections::string;
 use core::{char, f64, fmt, str};
-use core::num::Float;
 
 use Encodable;
 
@@ -330,7 +329,7 @@ pub enum DecoderError {
     EOF,
 }
 
-#[derive(Copy, Debug)]
+#[derive(Copy, PartialEq, Debug)]
 pub enum EncoderError {
     FmtError(fmt::Error),
     BadHashmapKey,
@@ -980,7 +979,7 @@ impl Json {
         self.as_object().is_some()
     }
 
-    /// If the Json value is an Object, returns the associated BTreeMap.
+    /// If the Json value is an Object, returns a reference to the associated BTreeMap.
     /// Returns None otherwise.
     pub fn as_object<'a>(&'a self) -> Option<&'a Object> {
         match self {
@@ -989,11 +988,20 @@ impl Json {
         }
     }
 
-    /// If the Json value is an Object, returns the associated mutable BTreeMap.
+    /// If the Json value is an Object, returns a mutable reference to the associated BTreeMap.
     /// Returns None otherwise.
     pub fn as_object_mut<'a>(&'a mut self) -> Option<&'a mut Object> {
         match self {
             &mut Json::Object(ref mut map) => Some(map),
+            _ => None
+        }
+    }
+
+    /// If the Json value is an Object, returns the associated BTreeMap.
+    /// Returns None otherwise.
+    pub fn into_object(self) -> Option<Object> {
+        match self {
+            Json::Object(map) => Some(map),
             _ => None
         }
     }
@@ -1003,7 +1011,7 @@ impl Json {
         self.as_array().is_some()
     }
 
-    /// If the Json value is an Array, returns the associated vector.
+    /// If the Json value is an Array, returns a reference to the associated vector.
     /// Returns None otherwise.
     pub fn as_array<'a>(&'a self) -> Option<&'a Array> {
         match self {
@@ -1012,11 +1020,20 @@ impl Json {
         }
     }
 
-    /// If the Json value is an Array, returns the associated mutable vector.
+    /// If the Json value is an Array, returns a mutable reference to the associated vector.
     /// Returns None otherwise.
     pub fn as_array_mut<'a>(&'a mut self) -> Option<&'a mut Array> {
         match self {
             &mut Json::Array(ref mut list) => Some(list),
+            _ => None
+        }
+    }
+
+    /// If the Json value is an Array, returns the associated vector.
+    /// Returns None otherwise.
+    pub fn into_array(self) -> Option<Array> {
+        match self {
+            Json::Array(array) => Some(array),
             _ => None
         }
     }
@@ -1449,6 +1466,8 @@ impl<T: Iterator<Item = char>> Parser<T> {
                 // Make sure we don't underflow.
                 if res > (i64::MAX as u64) + 1 {
                     Error(SyntaxError(InvalidNumber, self.line, self.col))
+                } else if res == 0 {
+                    I64Value(res as i64)
                 } else {
                     I64Value((!res + 1) as i64)
                 }
@@ -1889,7 +1908,7 @@ impl<T: Iterator<Item = char>> Builder<T> {
         match self.token.take() {
             None => {}
             Some(Error(e)) => { return Err(e); }
-            ref tok => { panic!("unexpected token {:?}", tok); }
+            _ => { return Err(SyntaxError(InvalidSyntax, self.parser.line, self.parser.col)); }
         }
         result
     }
@@ -3383,6 +3402,11 @@ mod tests {
     }
 
     #[test]
+    fn test_negative_zero() {
+        Json::from_str("{\"test\":-0}").unwrap();
+    }
+
+    #[test]
     fn test_prettyencode_hashmap_with_numeric_key() {
         use std::collections::HashMap;
         let mut hm: HashMap<usize, bool> = HashMap::new();
@@ -3893,5 +3917,13 @@ mod tests {
         let s = super::encode(&f).unwrap();
         let d = super::decode(&s).unwrap();
         assert_eq!(f, d);
+    }
+
+    #[test]
+    fn test_unexpected_token() {
+        match Json::from_str("{\"\":\"\",\"\":{\"\":\"\",\"\":[{\"\":\"\",}}}") {
+            Err(e) => assert_eq!(e, SyntaxError(InvalidSyntax, 1, 32)),
+            _ => ()
+        };
     }
 }
