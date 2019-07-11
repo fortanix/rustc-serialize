@@ -14,7 +14,10 @@
 
 pub use self::FromHexError::*;
 
-use std::fmt;
+use core::fmt;
+use alloc::string::String;
+use alloc::vec::Vec;
+#[cfg(feature = "std")]
 use std::error;
 
 /// A trait for converting a value to hexadecimal encoding
@@ -85,6 +88,7 @@ impl fmt::Debug for FromHexError {
     }
 }
 
+#[cfg(feature = "std")]
 impl error::Error for FromHexError {
     fn description(&self) -> &str {
         match *self {

@@ -34,6 +34,8 @@
 //! extern crate rustc_serialize;
 //! ```
 
+#![cfg_attr(not(test), no_std)]
+
 #![cfg_attr(rustbuild, feature(staged_api, rustc_private))]
 #![cfg_attr(rustbuild, unstable(feature = "rustc_private", issue = "27812"))]
 
@@ -49,6 +51,12 @@
                      reason = "use the crates.io `rustc-serialize` library instead"))]
 
 #[cfg(test)] extern crate rand;
+#[cfg(test)] extern crate core;
+
+#[cfg(all(feature = "std", not(test)))]
+extern crate std;
+#[macro_use]
+extern crate alloc;
 
 pub use self::serialize::{Decoder, Encoder, Decodable, Encodable,
                           DecoderHelpers, EncoderHelpers};
@@ -57,8 +65,8 @@ pub use self::serialize::{Decoder, Encoder, Decodable, Encodable,
 // Limit collections from allocating more than
 // 1 MB for calls to `with_capacity`.
 fn cap_capacity<T>(given_len: usize) -> usize {
-    use std::cmp::min;
-    use std::mem::size_of;
+    use core::cmp::min;
+    use core::mem::size_of;
     const PRE_ALLOCATE_CAP: usize = 0x100000;
 
     match size_of::<T>() {

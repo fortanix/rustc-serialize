@@ -10,10 +10,15 @@
 
 //! Implementations of serialization for structures found in libcollections
 
+#[cfg(feature = "std")]
 use std::hash::Hash;
 
-use {Decodable, Encodable, Decoder, Encoder, cap_capacity};
-use std::collections::{LinkedList, VecDeque, BTreeMap, BTreeSet, HashMap, HashSet};
+use {Decodable, Encodable, Decoder, Encoder};
+#[cfg(feature = "std")]
+use cap_capacity;
+use alloc::collections::{LinkedList, VecDeque, BTreeMap, BTreeSet};
+#[cfg(feature = "std")]
+use std::collections::{HashMap, HashSet};
 
 impl<
     T: Encodable
@@ -126,6 +131,7 @@ impl<
     }
 }
 
+#[cfg(feature = "std")]
 impl<K, V> Encodable for HashMap<K, V>
     where K: Encodable + Hash + Eq,
           V: Encodable,
@@ -143,6 +149,7 @@ impl<K, V> Encodable for HashMap<K, V>
     }
 }
 
+#[cfg(feature = "std")]
 impl<K, V> Decodable for HashMap<K, V>
     where K: Decodable + Hash + Eq,
           V: Decodable,
@@ -160,6 +167,7 @@ impl<K, V> Decodable for HashMap<K, V>
     }
 }
 
+#[cfg(feature = "std")]
 impl<T> Encodable for HashSet<T> where T: Encodable + Hash + Eq {
     fn encode<E: Encoder>(&self, s: &mut E) -> Result<(), E::Error> {
         s.emit_seq(self.len(), |s| {
@@ -173,6 +181,7 @@ impl<T> Encodable for HashSet<T> where T: Encodable + Hash + Eq {
     }
 }
 
+#[cfg(feature = "std")]
 impl<T> Decodable for HashSet<T> where T: Decodable + Hash + Eq, {
     fn decode<D: Decoder>(d: &mut D) -> Result<HashSet<T>, D::Error> {
         d.read_seq(|d, len| {

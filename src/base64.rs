@@ -15,7 +15,10 @@
 pub use self::FromBase64Error::*;
 pub use self::CharacterSet::*;
 
-use std::fmt;
+use core::fmt;
+use alloc::string::String;
+use alloc::vec::Vec;
+#[cfg(feature = "std")]
 use std::error;
 
 /// Available encoding character sets
@@ -223,6 +226,7 @@ impl fmt::Debug for FromBase64Error {
     }
 }
 
+#[cfg(feature = "std")]
 impl error::Error for FromBase64Error {
     fn description(&self) -> &str {
         match *self {
