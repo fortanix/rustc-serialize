@@ -244,15 +244,21 @@ use self::DecoderError::*;
 use self::ParserState::*;
 use self::InternalStackElement::*;
 
-use std::collections::{HashMap, BTreeMap};
+#[cfg(feature = "std")]
+use std::collections::HashMap;
+use alloc::collections::BTreeMap;
+#[cfg(feature = "std")]
 use std::error::Error as StdError;
-use std::i64;
-use std::io::prelude::*;
-use std::mem::swap;
-use std::ops::Index;
-use std::str::FromStr;
-use std::string;
-use std::{char, f64, fmt, io, str};
+use core::i64;
+#[cfg(feature = "std")]
+use std::io;
+use core::mem::swap;
+use core::ops::Index;
+use core::str::FromStr;
+use alloc::string::{self, String, ToString};
+use alloc::vec::Vec;
+use core::{char, f64, fmt, str};
+use core::fmt::Write;
 
 use Encodable;
 
@@ -304,6 +310,7 @@ pub enum ErrorCode {
 pub enum ParserError {
     /// msg, line, col
     SyntaxError(ErrorCode, usize, usize),
+    #[cfg(feature = "std")]
     IoError(io::Error),
 }
 
@@ -312,7 +319,9 @@ impl PartialEq for ParserError {
         match (self, other) {
             (&SyntaxError(msg0, line0, col0), &SyntaxError(msg1, line1, col1)) =>
                 msg0 == msg1 && line0 == line1 && col0 == col1,
+            #[cfg(feature = "std")]
             (&IoError(_), _) => false,
+            #[cfg(feature = "std")]
             (_, &IoError(_)) => false,
         }
     }
@@ -402,6 +411,7 @@ impl fmt::Debug for ErrorCode {
     }
 }
 
+#[cfg(feature = "std")]
 impl StdError for DecoderError {
     fn description(&self) -> &str { "decoder error" }
     fn cause(&self) -> Option<&StdError> {
@@ -424,6 +434,7 @@ impl From<ParserError> for DecoderError {
     }
 }
 
+#[cfg(feature = "std")]
 impl StdError for ParserError {
     fn description(&self) -> &str { "failed to parse json" }
 }
@@ -434,12 +445,14 @@ impl fmt::Display for ParserError {
     }
 }
 
+#[cfg(feature = "std")]
 impl From<io::Error> for ParserError {
     fn from(err: io::Error) -> ParserError {
         IoError(err)
     }
 }
 
+#[cfg(feature = "std")]
 impl StdError for EncoderError {
     fn description(&self) -> &str { "encoder error" }
 }
@@ -520,10 +533,21 @@ fn escape_str(wr: &mut fmt::Write, v: &str) -> EncodeResult<()> {
 }
 
 fn escape_char(writer: &mut fmt::Write, v: char) -> EncodeResult<()> {
-    let mut buf = [0; 4];
-    let _ = write!(&mut &mut buf[..], "{}", v);
-    let buf = unsafe { str::from_utf8_unchecked(&buf[..v.len_utf8()]) };
-    escape_str(writer, buf)
+    struct EscapeWriter<'a>(&'a mut fmt::Write);
+
+    impl Write for EscapeWriter<'_> {
+        fn write_str(&mut self, s: &str) -> fmt::Result {
+            if s.len() == 0 {
+                return Ok(())
+            }
+            escape_str(self.0, s).map_err(|e| match e {
+                EncoderError::FmtError(e) => e,
+                EncoderError::BadHashmapKey => unreachable!()
+            })
+        }
+    }
+
+    write!(EscapeWriter(writer), "{}", v).map_err(EncoderError::FmtError)
 }
 
 fn spaces(wr: &mut fmt::Write, n: u32) -> EncodeResult<()> {
@@ -542,7 +566,7 @@ fn spaces(wr: &mut fmt::Write, n: u32) -> EncodeResult<()> {
 }
 
 fn fmt_number_or_null(v: f64) -> string::String {
-    use std::num::FpCategory::{Nan, Infinite};
+    use core::num::FpCategory::{Nan, Infinite};
 
     match v.classify() {
         Nan | Infinite => "null".to_string(),
@@ -956,6 +980,7 @@ pub fn as_pretty_json<T: Encodable>(t: &T) -> AsPrettyJson<T> {
 
 impl Json {
     /// Decodes a json value from an `&mut io::Read`
+    #[cfg(feature = "std")]
     pub fn from_reader(rdr: &mut io::Read) -> Result<Self, BuilderError> {
         let contents = {
             let mut c = Vec::new();
@@ -1628,11 +1653,12 @@ impl<T: Iterator<Item = char>> Parser<T> {
             }
         }
 
-        let exp = 10_f64.powi(exp as i32);
-        if neg_exp {
-            res /= exp;
-        } else {
-            res *= exp;
+        for _ in 0..exp {
+            if neg_exp {
+                res /= 10.0;
+            } else {
+                res *= 10.0;
+            }
         }
 
         Ok(res)
@@ -2411,7 +2437,7 @@ impl ToJson for f32 {
 
 impl ToJson for f64 {
     fn to_json(&self) -> Json {
-        use std::num::FpCategory::{Nan, Infinite};
+        use core::num::FpCategory::{Nan, Infinite};
 
         match self.classify() {
             Nan | Infinite => Json::Null,
@@ -2486,6 +2512,7 @@ impl<A: ToJson> ToJson for BTreeMap<string::String, A> {
     }
 }
 
+#[cfg(feature = "std")]
 impl<A: ToJson> ToJson for HashMap<string::String, A> {
     fn to_json(&self) -> Json {
         let mut d = BTreeMap::new();
@@ -3460,6 +3487,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "std")]
     fn test_encode_hashmap_with_numeric_key() {
         use std::collections::HashMap;
         let mut hm: HashMap<usize, bool> = HashMap::new();

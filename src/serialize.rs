@@ -21,13 +21,18 @@
 Core encoding and decoding interfaces.
 */
 
-use std::cell::{Cell, RefCell};
+use core::cell::{Cell, RefCell};
+#[cfg(feature = "std")]
 use std::ffi::OsString;
+#[cfg(feature = "std")]
 use std::path;
-use std::rc::Rc;
-use std::sync::Arc;
-use std::marker::PhantomData;
-use std::borrow::Cow;
+use alloc::rc::Rc;
+use alloc::sync::Arc;
+use core::marker::PhantomData;
+use alloc::borrow::{Cow, ToOwned};
+use alloc::boxed::Box;
+use alloc::vec::Vec;
+use alloc::string::String;
 
 use cap_capacity;
 
@@ -1355,6 +1360,7 @@ array! {
     15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0,
 }
 
+#[cfg(feature = "std")]
 impl Encodable for path::Path {
     #[cfg(not(any(unix, windows)))]
     fn encode<S: Encoder>(&self, e: &mut S) -> Result<(), S::Error> {
@@ -1373,12 +1379,14 @@ impl Encodable for path::Path {
     }
 }
 
+#[cfg(feature = "std")]
 impl Encodable for path::PathBuf {
     fn encode<S: Encoder>(&self, e: &mut S) -> Result<(), S::Error> {
         (**self).encode(e)
     }
 }
 
+#[cfg(feature = "std")]
 impl Decodable for path::PathBuf {
     #[cfg(not(any(unix, windows)))]
     fn decode<D: Decoder>(d: &mut D) -> Result<path::PathBuf, D::Error> {
